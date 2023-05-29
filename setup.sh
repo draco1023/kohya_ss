@@ -86,12 +86,16 @@ VERBOSITY=2    #Start counting at 2 so that any increase to this will result in 
 MAXVERBOSITY=6 #The highest verbosity we use / allow to be displayed.  Feel free to adjust.
 
 BRANCH="master"
-GIT_REPO="https://github.com/bmaltais/kohya_ss.git"
+GIT_REPO="https://github.com/draco1023/kohya_ss.git"
 INTERACTIVE=false
 PUBLIC=false
 SKIP_SPACE_CHECK=false
 SKIP_GIT_UPDATE=false
 SKIP_GUI=false
+
+export GITHUB_MIRROR="hub.fgit.ml"
+git config --global url."https://${GITHUB_MIRROR}/".insteadOf "https://github.com/"
+git config protocol.https.allow always
 
 while getopts ":vb:d:g:inprus-:" opt; do
   # support long options: https://stackoverflow.com/a/28466267/519360
@@ -235,15 +239,19 @@ install_python_dependencies() {
 
   # Updating pip if there is one
   echo "Checking for pip updates before Python operations."
+  pip config --user set global.index https://mirrors.aliyun.com/pypi
+  pip config --user set global.index-url https://mirrors.aliyun.com/pypi/simple
+  pip config --user set global.trusted-host mirrors.aliyun.com
+
   pip install --upgrade pip >&3
 
   echo "Installing python dependencies. This could take a few minutes as it downloads files."
   echo "If this operation ever runs too long, you can rerun this script in verbose mode to check."
   case "$OSTYPE" in
-  "linux-gnu"*) pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 \
-    --extra-index-url https://download.pytorch.org/whl/cu116 >&3 &&
+  "linux-gnu"*) pip install torch torchvision \
+    --extra-index-url https://download.pytorch.org/whl/cpu >&3 &&
     pip install -U -I --no-deps \
-      https://github.com/C43H66N12O12S2/stable-diffusion-webui/releases/download/linux/xformers-0.0.14.dev0-cp310-cp310-linux_x86_64.whl >&3 ;;
+      "https://$GITHUB_MIRROR/C43H66N12O12S2/stable-diffusion-webui/releases/download/linux/xformers-0.0.14.dev0-cp310-cp310-linux_x86_64.whl" >&3 ;;
   "darwin"*) pip install torch==2.0.0 torchvision==0.15.1 \
     -f https://download.pytorch.org/whl/cpu/torch_stable.html >&3 ;;
   "cygwin")
@@ -383,9 +391,9 @@ update_kohya_ss() {
   if [ "$SKIP_GIT_UPDATE" = false ]; then
     if command -v git >/dev/null; then
       # First, we make sure there are no changes that need to be made in git, so no work is lost.
-      if [ "$(git -C "$DIR" status --porcelain=v1 2>/dev/null | wc -l)" -gt 0 ] &&
+      if [ "$(git --exec-path "$DIR" status --porcelain=v1 2>/dev/null | wc -l)" -gt 0 ] &&
         echo "These files need to be committed or discarded: " >&4 &&
-        git -C "$DIR" status >&4; then
+        git --exec-path "$DIR" status >&4; then
         echo "There are changes that need to be committed or discarded in the repo in $DIR."
         echo "Commit those changes or run this script with -n to skip git operations entirely."
         exit 1
@@ -394,15 +402,15 @@ update_kohya_ss() {
       echo "Attempting to clone $GIT_REPO."
       if [ ! -d "$DIR/.git" ]; then
         echo "Cloning and switching to $GIT_REPO:$BRANCH" >&4
-        git -C "$PARENT_DIR" clone -b "$BRANCH" "$GIT_REPO" "$(basename "$DIR")" >&3
-        git -C "$DIR" switch "$BRANCH" >&4
+        git --exec-path "$PARENT_DIR" clone -b "$BRANCH" "$GIT_REPO" "$(basename "$DIR")" >&3
+        git --exec-path "$DIR" switch "$BRANCH" >&4
       else
         echo "git repo detected. Attempting to update repository instead."
         echo "Updating: $GIT_REPO"
-        git -C "$DIR" pull "$GIT_REPO" "$BRANCH" >&3
-        if ! git -C "$DIR" switch "$BRANCH" >&4; then
+        git --exec-path "$DIR" pull "$GIT_REPO" "$BRANCH" >&3
+        if ! git --exec-path "$DIR" switch "$BRANCH" >&4; then
           echo "Branch $BRANCH did not exist. Creating it." >&4
-          git -C "$DIR" switch -c "$BRANCH" >&4
+          git --exec-path "$DIR" switch -c "$BRANCH" >&4
         fi
       fi
     else
