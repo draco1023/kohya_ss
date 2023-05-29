@@ -249,7 +249,7 @@ install_python_dependencies() {
   echo "If this operation ever runs too long, you can rerun this script in verbose mode to check."
   case "$OSTYPE" in
   "linux-gnu"*) pip install torch torchvision \
-    --extra-index-url https://mirror.sjtu.edu.cn/pytorch-wheels/cpu >&3 &&
+    --extra-index-url https://download.pytorch.org/whl/cpu >&3 &&
     pip install -U -I --no-deps \
       "https://$GITHUB_MIRROR/C43H66N12O12S2/stable-diffusion-webui/releases/download/linux/xformers-0.0.14.dev0-cp310-cp310-linux_x86_64.whl" >&3 ;;
   "darwin"*) pip install torch==2.0.0 torchvision==0.15.1 \
